@@ -717,26 +717,26 @@ MuseScore {
             RowLayout {
                   Layout.alignment: Qt.AlignHCenter
 
-                  SpinBox {
-                        id: sliderValue
-                        Layout.preferredWidth: 60
+                  // SpinBox {
+                  //       id: sliderValue
+                  //       Layout.preferredWidth: 60
 
-                        from: midpointSlider.from
-                        to: midpointSlider.to
-                        value: midpointSlider.value
-                        stepSize: midpointSlider.stepSize
+                  //       from: midpointSlider.from
+                  //       to: midpointSlider.to
+                  //       value: midpointSlider.value
+                  //       stepSize: midpointSlider.stepSize
 
-                        onValueModified: {
-                              midpointSlider.value = value;
-                              canvas.requestPaint();
-                        }
+                  //       onValueModified: {
+                  //             midpointSlider.value = value;
+                  //             canvas.requestPaint();
+                  //       }
 
-                        enabled: !curveType.isLinear
-                  }
+                  //       enabled: !curveType.isLinear
+                  // }
 
                   TextField {
                           id: midpointField
-                          Layout.preferredWidth: 60
+                          Layout.preferredWidth: 55
                           text: midpointSlider.value.toFixed(1)
 
                           onEditingFinished: {
