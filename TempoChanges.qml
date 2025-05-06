@@ -7,27 +7,27 @@
 //  Copyright (C) 2016-2019 Johan Temmerman (jeetee)
 //                2019 billhails & BSG & jeetee: added power curves
 //=============================================================================
-import QtQuick 2.2
-import QtQuick.Controls 1.1
-import QtQuick.Controls.Styles 1.3
-import QtQuick.Layouts 1.1
+import QtQuick 2.12
+import QtQuick.Controls 2.12
+// import QtQuick.Controls.Styles 1.3
+import QtQuick.Layouts 1.3
 import QtQuick.Window 2.2
-import Qt.labs.settings 1.0
+// import Qt.labs.settings 1.0
 
 import MuseScore 3.0
+import Muse.Ui 1.0
 
 MuseScore {
-      menuPath: "Plugins.TempoChanges"
-      version: "3.4.1"
+      version: "4.0"
       description: qsTr("Creates hidden tempo markers.\nSee also: https://musescore.org/en/handbook/3/tempo#ritardando-accelerando")
       pluginType: "dialog"
       requiresScore: true
-      id: 'pluginId'
+      id: tempoChanges
 
       property int margin: 10
       property int previousBeatIndex: 5
 
-      width:  360
+      width:  380
       height: 240
 
       onRun: {
@@ -72,7 +72,7 @@ MuseScore {
                   console.log('Found start tempo text = ' + foundTempo.text);
                   // Try to extract base beat
                   var targetBeatBaseIndex = findBeatBaseFromMarking(foundTempo);
-                  if (targetBeatBaseIndex != -1) {
+                  if (targetBeatBaseIndex !== -1) {
                         // Apply it
                         previousBeatIndex = targetBeatBaseIndex;
                         beatBase.currentIndex = targetBeatBaseIndex;
@@ -82,11 +82,11 @@ MuseScore {
                   startBPMvalue.placeholderText = Math.round(foundTempo.tempo * 60 / beatBaseItem.mult * 10) / 10;
             }
             // End Tempo
-            foundTempo = undefined
+            foundTempo = undefined;
             segment = sel.endSeg;
             while ((foundTempo === undefined) && (segment)) {
                   foundTempo = findExistingTempoElement(segment);
-                  segment = segment.next;
+                  segment = segment.prev
             }
             if (foundTempo !== undefined) {
                   console.log('Found end tempo text = ' + foundTempo.text);
@@ -106,7 +106,7 @@ MuseScore {
             if (foundMetronomeSymbols !== null) {
                   // Locate the index in our dropdown matching the found beatString
                   for (metronomeMarkIndex = beatBase.model.count; --metronomeMarkIndex >= 0; ) {
-                        if (beatBase.model.get(metronomeMarkIndex).sym == foundMetronomeSymbols[0]) {
+                        if (beatBase.model.get(metronomeMarkIndex).sym === foundMetronomeSymbols[0]) {
                               break; // Found this marking in the dropdown at metronomeMarkIndex
                         }
                   }
@@ -119,16 +119,16 @@ MuseScore {
                         if ((beatString >= "\uECA2") && (beatString <= "\uECA9")) {
                               // Found base tempo - continue looking for augmentation dots
                               while (++charidx < foundTempoText.length) {
-                                    if (foundTempoText[charidx] == "\uECB7") {
+                                    if (foundTempoText[charidx] === "\uECB7") {
                                           beatString += " \uECB7";
                                     }
-                                    else if (foundTempoText[charidx] != ' ') {
+                                    else if (foundTempoText[charidx] !== ' ') {
                                           break; // No longer augmentation dots or spaces
                                     }
                               }
                               // Locate the index in our dropdown matching the found beatString
                               for (metronomeMarkIndex = beatBase.model.count; --metronomeMarkIndex >= 0; ) {
-                                    if (beatBase.model.get(metronomeMarkIndex).text == beatString) {
+                                    if (beatBase.model.get(metronomeMarkIndex).text === beatString) {
                                           break; // Found this marking in the dropdown at metronomeMarkIndex
                                     }
                               }
@@ -162,7 +162,7 @@ MuseScore {
 
             curScore.startCmd();
             //add indicative text if required
-            if (startTextValue.text != "") {
+            if (startTextValue.text !== "") {
                   var startText = newElement(Element.STAFF_TEXT);
                   startText.text = startTextValue.text;
                   if (startText.textStyleType !== undefined) {
@@ -245,7 +245,7 @@ MuseScore {
                   endSeg: null
             };
             cursor.rewind(2); //find end of selection
-            if (cursor.tick == 0) {
+            if (cursor.tick === 0) {
                   // this happens when the selection includes
                   // the last measure of the score.
                   // rewind(2) goes behind the last segment (where
@@ -263,7 +263,7 @@ MuseScore {
       function getFloatFromInput(input)
       {
             var value = input.text;
-            if (value == "") {
+            if (value === "") {
                   value = input.placeholderText;
             }
             return parseFloat(value);
@@ -308,7 +308,7 @@ MuseScore {
                   cursor.add(tempoElement);
             }
             //changing of tempo can only happen after being added to the segment
-            tempoElement.tempo = quarterBaseTempo / 60; //real tempo setting according to "Follow Text"
+            tempoElement.tempo = quarterBaseTempo / 60; //real tempo setting according to followText
             tempoElement.tempoFollowText = true; //allows for manual fiddling by the user afterwards
 
             if (tempoTracker) {
@@ -317,7 +317,7 @@ MuseScore {
       }
 
       GridLayout {
-            id: 'mainLayout'
+            id: mainLayout
             anchors.fill: parent
             anchors.margins: 10
             columns: 3
@@ -327,11 +327,22 @@ MuseScore {
             Label {
                   text: qsTranslate("Ms::MuseScore", "Staff Text") + ":"
             }
+
             TextField {
                   id: startTextValue
-                  placeholderText: 'rit. / accel.'
+                  placeholderText: "rit. or accel."
+                  color: ui.theme.fontPrimaryColor
+                  // Set the placeholder color with dynamic opacity
+                  placeholderTextColor: Qt.rgba(
+                      ui.theme.fontPrimaryColor.r,
+                      ui.theme.fontPrimaryColor.g,
+                      ui.theme.fontPrimaryColor.b,
+                      text.length > 0 ? 1.0 : 0.5
+                  )
+
                   implicitHeight: 24
             }
+
             Canvas {
                   id: canvas
                   Layout.rowSpan: 4
@@ -371,7 +382,7 @@ MuseScore {
                         ctx.stroke();
 
                         //graph
-                        ctx.strokeStyle = '#abd3fb';
+                        ctx.strokeStyle = ui.theme.accentColor;
                         ctx.lineWidth = 2;
                         var start = getFloatFromInput(startBPMvalue);
                         var end = getFloatFromInput(endBPMvalue);
@@ -416,8 +427,11 @@ MuseScore {
             Label {
                   text: qsTr("BPM beat:")
             }
+
             ComboBox {
                   id: beatBase
+                  textRole: "text"
+
                   model: ListModel {
                         id: beatBaseList
                         //mult is a tempo-multiplier compared to a crotchet      
@@ -438,23 +452,40 @@ MuseScore {
                   }
                   currentIndex: 5
                   implicitHeight: 42
-                  style: ComboBoxStyle {
-                        textColor: '#000000'
-                        selectedTextColor: '#000000'
-                        font.family: 'MScore Text'
-                        font.pointSize: 18
-                        padding.top: 5
-                        padding.bottom: 5
-                  }
+                  font.family: "MScore Text"
+                  font.pointSize: 22
+                  contentItem: Item {
+                          anchors.fill: parent
+
+                          Text {
+                              anchors.verticalCenter: parent.verticalCenter
+                              anchors.left: parent.left
+                              anchors.leftMargin: 10
+                              text: beatBase.model.get(beatBase.currentIndex).text
+                              color: ui.theme.fontPrimaryColor
+                              font.family: "MScore Text"
+                              font.pointSize: 22
+                          }
+                      }
+
+                      delegate: ItemDelegate {
+                          contentItem: Text {
+                              text: model.text
+                              font.family: "MScore Text"
+                              font.pointSize: 22
+                              color: ui.theme.fontPrimaryColor
+                          }
+                      }
+
                   onCurrentIndexChanged: { // update the value fields to match the new beatBase
                         var changeFactor = beatBase.model.get(currentIndex).mult / beatBase.model.get(previousBeatIndex).mult;
-                        if (startBPMvalue.text == "") {
+                        if (startBPMvalue.text === "") {
                               startBPMvalue.placeholderText = Math.round(getFloatFromInput(startBPMvalue) / changeFactor * 10) / 10;
                         }
                         else {
                               startBPMvalue.text = Math.round(getFloatFromInput(startBPMvalue) / changeFactor * 10) / 10;
                         }
-                        if (endBPMvalue.text == "") {
+                        if (endBPMvalue.text === "") {
                               endBPMvalue.placeholderText = Math.round(getFloatFromInput(endBPMvalue) / changeFactor * 10) / 10;
                         }
                         else {
@@ -467,9 +498,19 @@ MuseScore {
             Label {
                   text: qsTr("Start BPM:")
             }
+
             TextField {
                   id: startBPMvalue
-                  placeholderText: '120'
+                  placeholderText: '60'
+                  color: ui.theme.fontPrimaryColor
+                  // Set the placeholder color with dynamic opacity
+                  placeholderTextColor: Qt.rgba(
+                      ui.theme.fontPrimaryColor.r,
+                      ui.theme.fontPrimaryColor.g,
+                      ui.theme.fontPrimaryColor.b,
+                      text.length > 0 ? 1.0 : 0.5
+                  )
+
                   validator: DoubleValidator { bottom: 1;/* top: 512;*/ decimals: 1; notation: DoubleValidator.StandardNotation; }
                   implicitHeight: 24
                   onTextChanged: { canvas.requestPaint(); }
@@ -480,7 +521,16 @@ MuseScore {
             }
             TextField {
                   id: endBPMvalue
-                  placeholderText: '60'
+                  placeholderText: '120'
+                  color: ui.theme.fontPrimaryColor
+                  // Set the placeholder color with dynamic opacity
+                  placeholderTextColor: Qt.rgba(
+                      ui.theme.fontPrimaryColor.r,
+                      ui.theme.fontPrimaryColor.g,
+                      ui.theme.fontPrimaryColor.b,
+                      text.length > 0 ? 1.0 : 0.5
+                  )
+
                   validator: DoubleValidator { bottom: 1;/* top: 512;*/ decimals: 1; notation: DoubleValidator.StandardNotation; }
                   implicitHeight: 24
                   onTextChanged: { canvas.requestPaint(); }
@@ -502,59 +552,168 @@ MuseScore {
                         canvas.requestPaint();
                   }
             }
+
             Label {
                   text: qsTr("midpoint:")
                   Layout.alignment: Qt.AlignRight
             }
+
             Slider {
-                  id: midpointSlider
-                  Layout.fillWidth: true
+                id: midpointSlider
 
-                  minimumValue: 1
-                  maximumValue: 99
-                  value: 75.0
-                  stepSize: 0.1
+                property bool fillBackground: true
 
-                  enabled: !curveType.isLinear
-                  
-                  style: SliderStyle {
-                        groove: Rectangle { //background
-                              id: grooveRect
-                              implicitHeight: 6
-                              color: (enabled) ? '#555555' : '#565656'
-                              radius: implicitHeight
-                              border {
-                                    color: '#888888'
-                                    width: 1
-                              }
-                              
-                              Rectangle {
-                                    //value fill
-                                    implicitHeight: grooveRect.implicitHeight
-                                    implicitWidth: styleData.handlePosition
-                                    color: (enabled) ? '#abd3fb' : '#567186'
-                                    radius: grooveRect.radius
-                                    border {
-                                          color: '#888888'
-                                          width: 1
-                                    }
-                              }
+                implicitWidth: vertical ? prv.handleSize : prv.defaultLength
+                implicitHeight: vertical ? prv.defaultLength : prv.handleSize
+
+                Layout.leftMargin: 10
+
+                hoverEnabled: midpointSlider.enabled
+                wheelEnabled: true
+
+                from: 1
+                to: 99
+                value: 75.0
+                stepSize: 0.1
+
+                enabled: !curveType.isLinear
+
+                onMoved: canvas.requestPaint()
+                onValueChanged: canvas.requestPaint()
+
+                QtObject {
+                    id: prv
+
+                    readonly property int lineSize: 4
+                    readonly property int radius: 4
+                    readonly property int handleSize: 14
+                    readonly property int defaultLength: 130
+                }
+
+                background: Item {
+                    id: mainBackground
+
+                    anchors.fill: parent
+
+                    Rectangle {
+                        id: filledBackground
+
+                        anchors.verticalCenter: parent.verticalCenter
+
+                        width: midpointSlider.fillBackground ? handleBackground.x + handleBackground.width / 2 : 0
+                        height: midpointSlider.fillBackground ? prv.lineSize : 0
+                        visible: midpointSlider.fillBackground
+
+                        opacity: curveType.isLinear ? 0.5 : 1
+                        color: ui.theme.accentColor
+                        radius: prv.radius
+                    }
+
+                    Rectangle {
+                        id: blankBackground
+
+                        anchors.verticalCenter: parent.verticalCenter
+
+                        width: mainBackground.width - filledBackground.width
+                        height: prv.lineSize
+
+                        x: filledBackground.width
+
+                        opacity: 0.5
+                        color: ui.theme.fontPrimaryColor
+                        radius: prv.radius
+                    }
+                }
+
+                handle: Rectangle {
+                    id: handleBackground
+
+                    x: midpointSlider.leftPadding + midpointSlider.visualPosition * (midpointSlider.availableWidth - width)
+                    y: midpointSlider.topPadding + midpointSlider.availableHeight / 2 - height / 2
+
+                    width: prv.handleSize
+                    height: width
+                    radius: width / 2
+
+                    color: ui.theme.textFieldColor
+
+                    Rectangle {
+                        id: handleBorder
+
+                        anchors.fill: parent
+
+                        radius: width / 2
+                        opacity: 0.7
+                        color: "transparent"
+                        border.width: 1
+                        border.color: ui.theme.fontPrimaryColor
+
+                        states: [
+                            State {
+                                name: "HOVERED"
+                                when: midpointSlider.hovered && !midpointSlider.pressed
+
+                                PropertyChanges {
+                                    target: handleBorder
+                                    opacity: 0.5
+                                }
+                            },
+
+                            State {
+                                name: "PRESSED"
+                                when: midpointSlider.pressed
+
+                                PropertyChanges {
+                                    target: handleBorder
+                                    opacity: 1
+                                }
+                            }
+                        ]
+                    }
+                }
+
+                states: [
+                    State {
+                        name: "VERTICAL"
+                        when: midpointSlider.vertical
+
+                        PropertyChanges {
+                            target: blankBackground
+
+                            anchors.top: parent.top
+                            anchors.verticalCenter: undefined
+                            anchors.horizontalCenter: parent.horizontalCenter
+
+                            width: prv.lineSize
+                            height: handleBackground.y + handleBackground.height / 2
                         }
-                        handle: Rectangle {
-                              anchors.centerIn: parent
-                              color: (enabled) ? (control.pressed ? '#ffffff': '#d8d8d8') : '#565656'
-                              border.color: '#666666'
-                              border.width: 1
-                              implicitWidth: 16
-                              implicitHeight: 16
-                              radius: 8
+
+                        PropertyChanges {
+                            target: filledBackground
+
+                            anchors.verticalCenter: undefined
+                            anchors.horizontalCenter: parent.horizontalCenter
+
+                            y: blankBackground.height
+
+                            width: midpointSlider.fillBackground ? prv.lineSize : 0
+                            height: midpointSlider.fillBackground ? midpointSlider.height - blankBackground.height : 0
                         }
-                  }
+
+                        PropertyChanges {
+                            target: handleBackground
+
+                            x: midpointSlider.topPadding + midpointSlider.availableWidth / 2 - width / 2
+                            y: midpointSlider.bottomPadding + midpointSlider.visualPosition * (midpointSlider.availableHeight - height)
+                        }
+                    }
+                ]
             }
 
             Label { 
                   Layout.columnSpan: 2 //just taking up two cells to make the next element align
             }
+
             RowLayout {
                   Layout.alignment: Qt.AlignHCenter
 
@@ -562,19 +721,37 @@ MuseScore {
                         id: sliderValue
                         Layout.preferredWidth: 60
 
-                        minimumValue: midpointSlider.minimumValue
-                        maximumValue: midpointSlider.maximumValue
+                        from: midpointSlider.from
+                        to: midpointSlider.to
                         value: midpointSlider.value
-                        decimals: 1
                         stepSize: midpointSlider.stepSize
 
-                        onValueChanged: {
+                        onValueModified: {
                               midpointSlider.value = value;
                               canvas.requestPaint();
                         }
 
                         enabled: !curveType.isLinear
                   }
+
+                  TextField {
+                          id: midpointField
+                          Layout.preferredWidth: 60
+                          text: midpointSlider.value.toFixed(1)
+
+                          onEditingFinished: {
+                              let newVal = parseFloat(text);
+                              if (!isNaN(newVal) && newVal >= midpointSlider.from && newVal <= midpointSlider.to) {
+                                  midpointSlider.value = newVal;
+                                  canvas.requestPaint();
+                              }
+                              text = midpointSlider.value.toFixed(1);  // Ensure sync
+                          }
+
+                          enabled: !curveType.isLinear
+                          validator: DoubleValidator { bottom: midpointSlider.from; top: midpointSlider.to }
+                      }
+
                   Label { text: '%' }
             }
 
@@ -584,7 +761,7 @@ MuseScore {
                   text: qsTranslate("PrefsDialogBase", "Apply")
                   onClicked: {
                         applyTempoChanges();
-                        pluginId.parent.Window.window.close();
+                        // pluginId.parent.Window.window.close();
                   }
             }
 
